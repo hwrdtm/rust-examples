@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "arc-references",
+    "closures",
+    "commands",
+    "fs",
+    "retry",
+    "rocket"
+]
