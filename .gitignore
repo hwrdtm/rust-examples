@@ -2,3 +2,4 @@
 Cargo.lock
 some_dir
 node*
+.DS_Store
