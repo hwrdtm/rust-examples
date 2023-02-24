@@ -5,6 +5,7 @@ members = [
     "commands",
     "fs",
     "locks",
+    "mock-structs",
     "retry",
     "rocket"
 ]
