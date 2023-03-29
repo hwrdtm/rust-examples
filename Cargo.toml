@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "arc-references",
+    "cargo-features",
     "closures",
     "commands",
     "fs",
