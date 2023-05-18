@@ -8,5 +8,6 @@ members = [
     "locks",
     "mock-structs",
     "retry",
-    "rocket"
+    "rocket",
+    "serde",
 ]
