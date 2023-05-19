@@ -110,7 +110,7 @@ impl<'de> Visitor<'de> for CustomVisitor {
                     if third.is_some() {
                         return Err(serde::de::Error::duplicate_field("third"));
                     }
-                    third = Some(map.next_value()?);
+                    third = map.next_value()?;
                 },
             }
         }
@@ -215,6 +215,15 @@ mod tests {
                     123,
                     Some("World".to_string()),
                     Type::Beta,
+                ),
+            },
+            DeserTestCase {
+                input: r#"{"first":"Hello","second":123,"third":null}"#,
+                expected: Custom::new_with_typ(
+                    "Hello".to_string(),
+                    123,
+                    None,
+                    Type::Alpha,
                 ),
             },
         ]
