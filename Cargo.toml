@@ -6,6 +6,7 @@ members = [
     "commands",
     "fs",
     "locks",
+    "long-running-task-checker",
     "mock-structs",
     "retry",
     "rocket",
