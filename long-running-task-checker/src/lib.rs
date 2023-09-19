@@ -24,7 +24,7 @@ where
 
     // Calculate the total elapsed time.
     let elapsed = start.elapsed();
-    info!("[{}] Elapsed (Total): {:?}", f_name.as_ref(), elapsed);
+    info!("[{}] Elapsed (Total): {:?}s", f_name.as_ref(), elapsed.as_secs_f64());
 
     // Cancel the checker now that the future has finished.
     handle.abort();
@@ -56,7 +56,7 @@ where
         let elapsed = start.elapsed();
 
         if elapsed.as_secs() >= next_threshold_secs {
-            warn!("[{}] Elapsed: {:?}", f_name.as_ref(), elapsed);
+            warn!("[{}] Elapsed: {:?}s", f_name.as_ref(), elapsed.as_secs_f64());
         } else {
             // push the element back in the set
             sec_thresholds.insert(next_threshold_secs);
