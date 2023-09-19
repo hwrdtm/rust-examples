@@ -9,13 +9,14 @@ pub async fn instrument_long_running_task<F, S>(
 ) -> F::Output
 where
     F: core::future::Future,
-    S: AsRef<str> + Send + Sync + Clone + Copy + 'static,
+    S: AsRef<str> + Send + Clone + 'static,
 {
     let start = std::time::Instant::now();
 
     // Kick off the checker.
+    let f_name_clone = f_name.clone();
     let handle = tokio::spawn(async move {
-        log_at_thresholds(sec_thresholds, f_name.clone()).await;
+        log_at_thresholds(sec_thresholds, f_name_clone).await;
     });
 
     // Execute the future.
