@@ -42,14 +42,8 @@ where
     let start = std::time::Instant::now();
     let mut sec_thresholds = sec_thresholds;
 
-    loop {
-        let next_threshold_secs = match sec_thresholds.pop_first() {
-            Some(threshold) => {
-                trace!("Threshold: {:?}", threshold);
-                threshold
-            }
-            None => break,
-        };
+    while let Some(next_threshold_secs) = sec_thresholds.pop_first() {
+        trace!("Threshold: {:?}", next_threshold_secs);
 
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
