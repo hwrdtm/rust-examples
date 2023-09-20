@@ -22,9 +22,7 @@ async fn main() -> Result<(), anyhow::Error> {
         "main_task",
         client.get("https://www.google.com/").send(),
         "backup_task",
-        async {
-            client.get("https://google.com/").send()
-        }.await,
+        client.get("https://google.com/").send(),
     )
     .await;
     assert!(res.is_ok());
