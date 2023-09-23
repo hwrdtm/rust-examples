@@ -2,27 +2,15 @@ use std::collections::HashMap;
 
 use log::{debug, info};
 use opentelemetry::propagation::Injector;
+use opentelemetry::propagation::TextMapPropagator;
 use opentelemetry::sdk::propagation::TraceContextPropagator;
-use opentelemetry::{global, propagation::TextMapPropagator};
 use tracing::instrument;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::prelude::*;
 
-fn init_tracer() {
-    global::set_text_map_propagator(TraceContextPropagator::new());
-
-    let provider = opentelemetry_jaeger::new_agent_pipeline()
-        .build_simple()
-        .unwrap();
-
-    global::set_tracer_provider(provider);
-}
-
 #[tokio::main]
 async fn main() -> std::result::Result<(), anyhow::Error> {
     env_logger::init();
-
-    init_tracer();
 
     info!("Starting up");
 
