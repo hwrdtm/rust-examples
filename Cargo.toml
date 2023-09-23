@@ -5,6 +5,8 @@ members = [
     "closures",
     "commands",
     "delayed-spray-and-pray",
+    "distributed-tracing/client",
+    "distributed-tracing/server",
     "fs",
     "locks",
     "long-running-task-checker",

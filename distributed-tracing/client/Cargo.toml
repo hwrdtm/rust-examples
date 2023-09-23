@@ -1,0 +1,21 @@
+[package]
+name = "distributed-tracing-client"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "*"
+env_logger = "*"
+log = { version = "0.4.17", features = ["kv_unstable", "kv_unstable_serde"] }
+opentelemetry = { version = "0.18" }
+opentelemetry-contrib = "0.12"
+opentelemetry-http = "0.9"
+opentelemetry-jaeger = { version = "0.17" }
+reqwest = { version = "0.11.14", features = ["json", "blocking"] }
+tokio = { version = "1.23.0", features = ["full", "rt-multi-thread"] }
+tracing = "0.1"
+tracing-opentelemetry = { version = "0.18" }
+tracing-subscriber = { version = "0.3.16" }
+rocket = "=0.5.0-rc.3"
