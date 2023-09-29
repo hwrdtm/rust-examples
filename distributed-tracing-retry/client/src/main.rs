@@ -6,7 +6,6 @@ use log::{debug, info};
 use opentelemetry::propagation::Injector;
 use opentelemetry::propagation::TextMapPropagator;
 use opentelemetry::sdk::propagation::TraceContextPropagator;
-use reqwest::RequestBuilder;
 use retry::call_with_retry;
 use tracing::Instrument;
 use tracing::info_span;
