@@ -12,6 +12,7 @@ members = [
     "long-running-task-checker",
     "mock-structs",
     "retry",
+    "retry-basic",
     "rocket",
     "serde",
 ]
