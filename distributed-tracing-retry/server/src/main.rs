@@ -5,9 +5,11 @@ extern crate rocket;
 
 use std::collections::HashMap;
 
+use anyhow::anyhow;
 use log::{debug, info};
 use opentelemetry::{propagation::Extractor, sdk::propagation::TraceContextPropagator};
-use rocket::{request::Outcome, routes};
+use rocket::serde::json::json;
+use rocket::{http::Status, request::Outcome, response::status, routes, serde::json::Value};
 use tracing::{info_span, instrument, Instrument};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::prelude::*;
@@ -17,7 +19,8 @@ use opentelemetry::propagation::TextMapPropagator;
 // Global mutable, thread-safe counter.
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-static COUNTER: AtomicUsize = AtomicUsize::new(0);
+static TIMEOUTSUCCESS: AtomicUsize = AtomicUsize::new(0);
+static TIMEOUTERROR: AtomicUsize = AtomicUsize::new(0);
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
@@ -112,42 +115,76 @@ impl<'r> rocket::request::FromRequest<'r> for TracingSpan {
     }
 }
 
-#[get("/world")]
-async fn world(tracing_span: TracingSpan) -> &'static str {
-    // Call something
-    let _ = something().instrument(tracing_span.span().to_owned()).await;
-    "Hello, world!"
+#[get("/world?<mode>")]
+async fn world(tracing_span: TracingSpan, mode: &str) -> status::Custom<Value> {
+    if mode == "timeoutsuccess" {
+        let _ = timeoutsuccess()
+            .instrument(tracing_span.span().to_owned())
+            .await;
+    } else if mode == "timeouterror" {
+        if let Err(e) = timeouterror()
+            .instrument(tracing_span.span().to_owned())
+            .await
+        {
+            error!("timeouterror: {:?}", e);
+            return status::Custom(
+                Status::InternalServerError,
+                json!({
+                    "error": e.to_string(),
+                }),
+            );
+        }
+    } else if mode == "error" {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        return status::Custom(
+            Status::InternalServerError,
+            json!({
+                "error": "customerror",
+            }),
+        );
+    } else if mode == "success" {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    status::Custom(
+        Status::Ok,
+        json!({
+            "message": "Life is good.",
+        }),
+    )
 }
 
-#[instrument(name = "something", fields(thing=2) skip_all, ret)]
-async fn something() -> Result<(), anyhow::Error> {
-    info!("[something]");
+#[instrument(name = "timeoutsuccess", skip_all, ret)]
+async fn timeoutsuccess() -> Result<(), anyhow::Error> {
+    info!("[timeoutsuccess]");
 
-    let counter = COUNTER.fetch_add(1, Ordering::SeqCst);
+    let counter = TIMEOUTSUCCESS.fetch_add(1, Ordering::SeqCst);
 
-    if counter < 2 {
-        // Sleep for 4s before calling another function.
-        debug!("Sleeping for 8s");
-        tokio::time::sleep(std::time::Duration::from_secs(8)).await;
+    if counter < 1 {
+        debug!("Sleeping for 10s");
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
     } else {
-        // Sleep for 1s before calling another function.
         debug!("Sleeping for 1s");
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
 
-    // Call something_inner
-    something_inner().await?;
-
     Ok(())
 }
 
-#[instrument(name = "something_inner", skip_all, ret)]
-async fn something_inner() -> Result<(), anyhow::Error> {
-    info!("[something_inner]");
+#[instrument(name = "timeouterror", skip_all, ret)]
+async fn timeouterror() -> Result<(), anyhow::Error> {
+    info!("[timeouterror]");
 
-    // Sleep for 2s
-    debug!("Sleeping for 2s");
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+    let counter = TIMEOUTERROR.fetch_add(1, Ordering::SeqCst);
+
+    if counter < 1 {
+        debug!("Sleeping for 10s");
+        tokio::time::sleep(std::time::Duration::from_secs(10)).await;
+    } else {
+        debug!("Sleeping for 1s");
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        return Err(anyhow!("timeouterror"));
+    }
 
     Ok(())
 }
