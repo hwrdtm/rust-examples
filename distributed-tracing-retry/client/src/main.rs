@@ -50,7 +50,7 @@ async fn main() -> std::result::Result<(), anyhow::Error> {
 }
 
 #[instrument(name = "make_request", skip_all, ret)]
-async fn make_request(qs: &String) -> Result<(), anyhow::Error> {
+async fn make_request(qs: &String) -> Result<(), reqwest::Error> {
     // Get the OpenTelemetry `Context` via the current `tracing::Span`.
     let cx = tracing::Span::current().context();
 
