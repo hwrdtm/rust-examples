@@ -33,6 +33,7 @@ async fn main() -> std::result::Result<(), anyhow::Error> {
 
 
     // TODO: Investigate why the retry doesn't get triggered immediately and the runtime is sleeping for some time.
+    // Can consider using https://github.com/tokio-rs/console to help profile.
     {
         call_with_retry(async || make_request(&qs).await)
             .instrument(info_span!("retry_block"))
