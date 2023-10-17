@@ -10,6 +10,7 @@ members = [
     "distributed-tracing-retry/client",
     "distributed-tracing-retry/server",
     "fs",
+    "futures-join-all",
     "locks",
     "long-running-task-checker",
     "mock-structs",
