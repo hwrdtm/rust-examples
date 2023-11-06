@@ -3,6 +3,7 @@ members = [
     "arc-references",
     "cargo-features",
     "closures",
+    "crate-version",
     "commands",
     "delayed-spray-and-pray",
     "distributed-tracing/client",
