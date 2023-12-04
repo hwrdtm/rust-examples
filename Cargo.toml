@@ -15,6 +15,7 @@ members = [
     "locks",
     "long-running-task-checker",
     "mock-structs",
+    "multiple-cargo-binaries",
     "retry",
     "retry-basic",
     "rocket",

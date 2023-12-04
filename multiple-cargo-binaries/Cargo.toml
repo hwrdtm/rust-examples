@@ -1,0 +1,17 @@
+[package]
+name = "multiple-cargo-binaries"
+version = "0.1.0"
+edition = "2021"
+default-run = "multiple-cargo-binaries"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+[[bin]]
+name = "multiple-cargo-binaries"
+path = "src/main.rs"
+
+[[bin]]
+name = "custom-script"
+path = "custom-script/bin/main.rs"
