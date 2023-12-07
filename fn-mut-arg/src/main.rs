@@ -17,7 +17,7 @@ async fn main() {
         mapper_fn: |tup: (usize, String)| async move {
             println!("({}): {}", tup.0, tup.1);
             if tup.0 >= 1 {
-                some_sleep_func(&tup.0.to_string()).await;
+                some_sleep_func(&tup.1).await;
             }
             Ok::<i32, anyhow::Error>(1)
         },
