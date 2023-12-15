@@ -1,0 +1,30 @@
+[package]
+name = "grpc-toxiproxy"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+proxy_grpc = []
+
+[[bin]]
+name = "client"
+path = "src/client.rs"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
+
+[[bin]]
+name = "faults"
+path = "src/faults.rs"
+
+[dependencies]
+tonic = "0.10"
+prost = "0.12"
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+toxiproxy_rust = "0.1.6"
+
+[build-dependencies]
+tonic-build = "0.10"

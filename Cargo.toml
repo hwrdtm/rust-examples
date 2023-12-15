@@ -13,6 +13,7 @@ members = [
     "fn-mut-arg",
     "fs",
     "futures-join-all",
+    "grpc-toxiproxy",
     "locks",
     "long-running-task-checker",
     "mock-structs",

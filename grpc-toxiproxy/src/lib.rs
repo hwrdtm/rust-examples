@@ -1,0 +1,2 @@
+pub const DEFAULT_SERVER_PORT: u16 = 50051;
+pub const PROXIED_SERVER_PORT: u16 = 59999;
