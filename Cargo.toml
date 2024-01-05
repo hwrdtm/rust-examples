@@ -22,5 +22,6 @@ members = [
     "retry-basic",
     "rocket",
     "serde",
-    "simple-dockerized-server"
+    "simple-dockerized-server",
+    "tasks-greater-than-interval"
 ]
