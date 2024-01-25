@@ -21,6 +21,7 @@ members = [
     "retry",
     "retry-basic",
     "rocket",
+    "rocket-concurrency",
     "serde",
     "simple-dockerized-server",
     "tasks-greater-than-interval"
