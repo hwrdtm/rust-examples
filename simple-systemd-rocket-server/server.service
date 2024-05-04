@@ -1,0 +1,14 @@
+[Unit]
+Description=Simple Server
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+LimitNOFILE=64000
+LimitNPROC=64000
+WorkingDirectory=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-rocket-server/
+Environment=SERVER_PORT="800%i"
+Environment=RUST_LOG=debug
+ExecStart=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-rocket-server/target/debug/simple-systemd-rocket-server
