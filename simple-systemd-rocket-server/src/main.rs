@@ -14,5 +14,6 @@ async fn main() {
         format!("[{}] Hello, {}!", port, name)
     });
 
+    println!("[{}] Starting server...", port);
     warp::serve(hello).run(([127, 0, 0, 1], port)).await;
 }

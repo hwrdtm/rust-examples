@@ -11,4 +11,4 @@ LimitNPROC=64000
 WorkingDirectory=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-rocket-server/
 Environment=SERVER_PORT="800%i"
 Environment=RUST_LOG=debug
-ExecStart=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-rocket-server/target/debug/simple-systemd-rocket-server
+ExecStart=/home/ubuntu/hwrdtm/rust-examples/target/debug/simple-systemd-rocket-server
