@@ -1,3 +1,7 @@
+use std::{convert::Infallible, time::Duration};
+
+use serde_derive::{Deserialize, Serialize};
+
 use warp::Filter;
 
 #[tokio::main]
@@ -14,6 +18,34 @@ async fn main() {
         format!("[{}] Hello, {}!", port, name)
     });
 
+    // POST /hello => 200 OK
+    let forward = warp::post()
+        .and(warp::path("forward"))
+        .and(warp::body::json())
+        .and_then(sleepy);
+
     println!("[{}] Starting server...", port);
-    warp::serve(hello).run(([127, 0, 0, 1], port)).await;
+
+    let routes = hello.or(forward);
+    warp::serve(routes).run(([127, 0, 0, 1], port)).await;
+}
+
+async fn sleepy(mut fd: ForwardDetails) -> Result<impl warp::Reply, Infallible> {
+    println!("Forwarding to: {}", fd.forward_url);
+
+    // Make a request to the forward_url
+    let response = reqwest::Client::new()
+        .get(&fd.forward_url)
+        .send()
+        .await
+        .unwrap();
+
+    let body = response.text().await.unwrap();
+
+    Ok(format!("Response from {}: {}", fd.forward_url, body))
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct ForwardDetails {
+    pub forward_url: String,
 }
