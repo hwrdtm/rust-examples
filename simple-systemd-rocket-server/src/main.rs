@@ -6,6 +6,8 @@ use warp::Filter;
 
 #[tokio::main]
 async fn main() {
+    env_logger::init();
+
     // Read SERVER_PORT environment variable
     let port = std::env::var("SERVER_PORT")
         .expect("SERVER_PORT must be set")
