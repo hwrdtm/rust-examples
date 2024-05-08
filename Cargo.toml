@@ -23,7 +23,7 @@ members = [
     "rocket",
     "rocket-concurrency",
     "serde",
-    "simple-systemd-rocket-server",
+    "simple-systemd-http-server",
     "simple-dockerized-server",
     "tasks-greater-than-interval"
 ]
