@@ -8,7 +8,7 @@ RestartSec=1
 User=root
 LimitNOFILE=64000
 LimitNPROC=64000
-WorkingDirectory=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-rocket-server/
+WorkingDirectory=/home/ubuntu/hwrdtm/rust-examples/simple-systemd-http-server/
 Environment=SERVER_PORT="800%i"
 Environment=RUST_LOG=trace
-ExecStart=/home/ubuntu/hwrdtm/rust-examples/target/debug/simple-systemd-rocket-server
+ExecStart=/home/ubuntu/hwrdtm/rust-examples/target/debug/simple-systemd-http-server

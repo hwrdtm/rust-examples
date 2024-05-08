@@ -1,5 +1,5 @@
 [package]
-name = "simple-systemd-rocket-server"
+name = "simple-systemd-http-server"
 version = "0.1.0"
 edition = "2021"
 
