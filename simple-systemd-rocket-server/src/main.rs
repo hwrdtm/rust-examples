@@ -34,11 +34,12 @@ async fn sleepy(mut fd: ForwardDetails) -> Result<impl warp::Reply, Infallible> 
     println!("Forwarding to: {}", fd.forward_url);
 
     // Make a request to the forward_url
-    let response = reqwest::Client::new()
-        .get(&fd.forward_url)
-        .send()
-        .await
-        .unwrap();
+    let response = match reqwest::Client::new().get(&fd.forward_url).send().await {
+        Ok(response) => response,
+        Err(e) => {
+            return Ok(format!("Error: {}", e));
+        }
+    };
 
     let body = response.text().await.unwrap();
 
