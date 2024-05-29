@@ -1,11 +1,11 @@
 use serde::ser::SerializeMap;
-use serde::{Serialize, Serializer, de::Visitor, de::MapAccess, Deserialize, Deserializer};
+use serde::{de::MapAccess, de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
 enum Type {
     Alpha,
-    Beta
+    Beta,
 }
 
 #[derive(Debug, PartialEq)]
@@ -27,7 +27,12 @@ impl Custom {
         }
     }
 
-    pub(self) fn new_with_typ(first: String, second: u32, third: Option<String>, typ: Type) -> Self {
+    pub(self) fn new_with_typ(
+        first: String,
+        second: u32,
+        third: Option<String>,
+        typ: Type,
+    ) -> Self {
         Custom {
             first,
             second,
@@ -63,12 +68,16 @@ impl Serialize for Custom {
 
 #[derive(Deserialize)]
 #[serde(field_identifier, rename_all = "lowercase")]
-enum CustomField { First, Second, Third }
+enum CustomField {
+    First,
+    Second,
+    Third,
+}
 
 impl<'de> Deserialize<'de> for Custom {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>
+    where
+        D: Deserializer<'de>,
     {
         //deserializer.deserialize_any(CustomVisitor)
         deserializer.deserialize_map(CustomVisitor)
@@ -81,12 +90,15 @@ impl<'de> Visitor<'de> for CustomVisitor {
     type Value = Custom;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        write!(formatter, "a map with keys 'first' and 'second', and optionally 'third'")
+        write!(
+            formatter,
+            "a map with keys 'first' and 'second', and optionally 'third'"
+        )
     }
 
     fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
     where
-        M: MapAccess<'de>
+        M: MapAccess<'de>,
     {
         let mut first = None;
         let mut second = None;
@@ -99,19 +111,19 @@ impl<'de> Visitor<'de> for CustomVisitor {
                         return Err(serde::de::Error::duplicate_field("first"));
                     }
                     first = Some(map.next_value()?);
-                },
+                }
                 CustomField::Second => {
                     if second.is_some() {
                         return Err(serde::de::Error::duplicate_field("second"));
                     }
                     second = Some(map.next_value()?);
-                },
+                }
                 CustomField::Third => {
                     if third.is_some() {
                         return Err(serde::de::Error::duplicate_field("third"));
                     }
                     third = map.next_value()?;
-                },
+                }
             }
         }
 
@@ -125,20 +137,15 @@ impl<'de> Visitor<'de> for CustomVisitor {
     }
 }
 
-
 fn main() {
-    let stru = Custom::new(
-        "Hello".to_string(),
-        123,
-        Some("World".to_string()),
-    );
+    let stru = Custom::new("Hello".to_string(), 123, Some("World".to_string()));
     println!("Orig {:?}", stru);
 
     let serialized = serde_json::to_string(&stru).expect("err ser");
 
     println!("Seri {}", serialized);
 
-    let unse : Custom = serde_json::from_str(&serialized).expect("err unser");
+    let unse: Custom = serde_json::from_str(&serialized).expect("err unser");
     println!("New {:?}", unse);
 }
 
@@ -179,19 +186,11 @@ mod tests {
     fn get_test_ser_test_cases() -> Vec<SerTestCase> {
         vec![
             SerTestCase {
-                input: Custom::new(
-                    "Hello".to_string(),
-                    123,
-                    None,
-                ),
+                input: Custom::new("Hello".to_string(), 123, None),
                 expected: r#"{"first":"Hello","second":123}"#,
             },
             SerTestCase {
-                input: Custom::new(
-                    "Hello".to_string(),
-                    123,
-                    Some("World".to_string()),
-                ),
+                input: Custom::new("Hello".to_string(), 123, Some("World".to_string())),
                 expected: r#"{"first":"Hello","second":123,"third":"World"}"#,
             },
         ]
@@ -201,12 +200,7 @@ mod tests {
         vec![
             DeserTestCase {
                 input: r#"{"first":"Hello","second":123}"#,
-                expected: Custom::new_with_typ(
-                    "Hello".to_string(),
-                    123,
-                    None,
-                    Type::Alpha,
-                ),
+                expected: Custom::new_with_typ("Hello".to_string(), 123, None, Type::Alpha),
             },
             DeserTestCase {
                 input: r#"{"first":"Hello","second":123,"third":"World"}"#,
@@ -219,12 +213,7 @@ mod tests {
             },
             DeserTestCase {
                 input: r#"{"first":"Hello","second":123,"third":null}"#,
-                expected: Custom::new_with_typ(
-                    "Hello".to_string(),
-                    123,
-                    None,
-                    Type::Alpha,
-                ),
+                expected: Custom::new_with_typ("Hello".to_string(), 123, None, Type::Alpha),
             },
         ]
     }

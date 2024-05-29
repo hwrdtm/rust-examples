@@ -9,7 +9,7 @@ fn main() {
 }
 
 /// Example to demonstrate a deadlock.
-/// 
+///
 /// The reason for this is that the write lock is unable to acquire
 /// a write lock because the read lock is held by the main thread,
 /// and when the main thread is acquiring another read lock, it
@@ -61,7 +61,7 @@ fn always_deadlocks() {
 }
 
 /// Example to demonstrate write lock being blocked by read lock.
-/// 
+///
 /// The reason for this is that the call to obtain a write lock
 /// blocks until all write and read locks are released.
 fn write_lock_blocks() {

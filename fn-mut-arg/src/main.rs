@@ -29,13 +29,15 @@ async fn main() {
     // Demonstrate the async mapping functionality.
     let mut async_store_trait_object = AsyncStoreTraitObject {
         items: vec!["f".to_string(), "g".to_string(), "h".to_string()],
-        mapper_fn: Box::new(|tup: (usize, String)| Box::pin(async move {
-            println!("({}): {}", tup.0, tup.1);
-            if tup.0 >= 1 {
-                some_sleep_func(&tup.1).await;
-            }
-            Ok::<i32, anyhow::Error>(1)
-        }) as BoxFuture<'static, Result<i32, anyhow::Error>>)
+        mapper_fn: Box::new(|tup: (usize, String)| {
+            Box::pin(async move {
+                println!("({}): {}", tup.0, tup.1);
+                if tup.0 >= 1 {
+                    some_sleep_func(&tup.1).await;
+                }
+                Ok::<i32, anyhow::Error>(1)
+            }) as BoxFuture<'static, Result<i32, anyhow::Error>>
+        }),
     };
     async_store_trait_object.execute().await;
 }
@@ -77,7 +79,13 @@ where
 
 pub struct AsyncStoreTraitObject {
     pub items: Vec<String>,
-    pub mapper_fn: Box<dyn Mapper<Item = i32, Error = anyhow::Error, Future = BoxFuture<'static, Result<i32, anyhow::Error>>>>,
+    pub mapper_fn: Box<
+        dyn Mapper<
+            Item = i32,
+            Error = anyhow::Error,
+            Future = BoxFuture<'static, Result<i32, anyhow::Error>>,
+        >,
+    >,
 }
 
 impl AsyncStoreTraitObject {

@@ -12,9 +12,7 @@ struct SomeStruct {
 async fn main() -> Result<(), anyhow::Error> {
     env_logger::init();
 
-    let client = reqwest::Client::builder()
-        .build()
-        .unwrap();
+    let client = reqwest::Client::builder().build().unwrap();
 
     // Test 1: other future finishes first.
     let res = delayed_spray_and_pray(

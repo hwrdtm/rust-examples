@@ -27,4 +27,3 @@ async fn fallible_async_function_with_param(param: usize) -> Result<usize, ()> {
         Ok(param)
     }
 }
-

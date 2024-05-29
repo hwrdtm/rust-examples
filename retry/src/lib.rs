@@ -1,5 +1,5 @@
 use tokio_retry::strategy::{jitter, FixedInterval};
-use tokio_retry::{Action, Retry, RetryIf, Condition};
+use tokio_retry::{Action, Condition, Retry, RetryIf};
 
 /// Wraps a function that returns a future in a retry strategy.
 /// The universal retry strategy we will use for all our async functions is a fixed interval strategy
@@ -15,7 +15,7 @@ pub async fn call_with_retry<A: Action>(
 }
 
 /// Wraps a function that returns a future in a retry strategy depending on a condition.
-/// 
+///
 /// The universal retry strategy we will use for all our async functions is a fixed interval strategy
 /// that will retry the function 2 times, totalling 3 attempts.
 pub async fn call_with_retry_condition<A: Action, C: Condition<A::Error>>(

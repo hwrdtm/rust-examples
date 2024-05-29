@@ -1,10 +1,10 @@
-use std::os::fd::{IntoRawFd, FromRawFd};
+use std::io::{Read, Write};
+use std::os::fd::{FromRawFd, IntoRawFd};
 use std::process::{Command, Stdio};
-use std::io::{Write, Read};
 
 fn main() {
     let mut file = std::fs::File::create("./node.txt").unwrap();
-    
+
     // Use Command and Stdio piped to run: echo -n 'thing' | base64
     let echo_cmd = Command::new("echo")
         .arg("-n")
