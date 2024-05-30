@@ -12,11 +12,11 @@ name = "proxy-server"
 path = "src/proxy_server.rs"
 
 [dependencies]
-hyper = "1.1"
-hyperlocal = { version = "0.8"}
 opentelemetry = "0.23"
 opentelemetry-otlp = { version = "0.16", features = ["metrics"] }
 opentelemetry-proto = { version = "0.6.0", features = ["full"] }
 opentelemetry_sdk = { version = "0.23.0", features = ["rt-tokio", "metrics"] }
 tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["net"] }
 tonic = "0.11"
+tower = "0.4"

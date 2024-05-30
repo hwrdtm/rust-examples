@@ -3,14 +3,29 @@ use std::time::Duration;
 use opentelemetry::{global, KeyValue};
 use opentelemetry_otlp::{ExportConfig, WithExportConfig};
 use opentelemetry_sdk::metrics::reader::{DefaultAggregationSelector, DefaultTemporalitySelector};
+use simple_observability_pipeline::DEFAULT_SOCK;
+use tokio::net::UnixStream;
+use tonic::transport::{Endpoint, Uri};
+use tower::service_fn;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Tonic will ignore this uri because uds do not use it
+    // if the connector does use the uri it will be provided
+    // as the request to the `MakeConnection`.
+    let channel = Endpoint::try_from("http://127.0.0.1:4371")?
+        .connect_with_connector(service_fn(|_: Uri| {
+            // Connect to a Uds socket
+            UnixStream::connect(DEFAULT_SOCK)
+        }))
+        .await?;
+
     // First, create a OTLP exporter builder. Configure it as you need.
     let otlp_exporter = opentelemetry_otlp::new_exporter()
         .tonic()
+        .with_channel(channel)
         .with_export_config(ExportConfig {
-            endpoint: "http://127.0.0.1:4317".to_string(),
+            endpoint: "".to_string(),
             protocol: opentelemetry_otlp::Protocol::Grpc,
             timeout: Duration::from_secs(3),
         }); // Then pass it into pipeline builder

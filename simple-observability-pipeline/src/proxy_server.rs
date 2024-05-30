@@ -4,6 +4,9 @@ use opentelemetry_proto::tonic::collector::metrics::v1::metrics_service_server::
 use opentelemetry_proto::tonic::collector::metrics::v1::{
     ExportMetricsServiceRequest, ExportMetricsServiceResponse,
 };
+use simple_observability_pipeline::DEFAULT_SOCK;
+use tokio::net::UnixListener;
+use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
 #[derive(Debug, Default)]
@@ -27,13 +30,20 @@ impl MetricsService for OTELProxyServer {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = format!("127.0.0.1:{}", 4317).parse()?;
-    println!("Listening on {}", addr);
     let server = OTELProxyServer::default();
+
+    // If the socket already exists, remove it
+    if std::fs::metadata(DEFAULT_SOCK).is_ok() {
+        std::fs::remove_file(DEFAULT_SOCK)?;
+    }
+
+    let uds = UnixListener::bind(DEFAULT_SOCK)?;
+    let uds_stream = UnixListenerStream::new(uds);
+    println!("Listening on {:?}", uds_stream);
 
     Server::builder()
         .add_service(MetricsServiceServer::new(server))
-        .serve(addr)
+        .serve_with_incoming(uds_stream)
         .await?;
 
     Ok(())
