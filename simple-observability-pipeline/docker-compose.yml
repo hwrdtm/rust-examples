@@ -5,6 +5,8 @@ services:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
       - ./service-account-key.json:/etc/otelcol-contrib/key.json
       - ./:/tmp
+      - ./otel_proxy_server.log:/otel_proxy_server.log
+      - ./otelcol/file_storage/receiver:/var/lib/otelcol/file_storage/receiver
     environment:
       - GOOGLE_APPLICATION_CREDENTIALS=/etc/otelcol-contrib/key.json
     ports:

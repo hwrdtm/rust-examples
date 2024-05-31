@@ -4,6 +4,8 @@ extensions:
     endpoint: 0.0.0.0:1777
   zpages:
     endpoint: 0.0.0.0:55679
+  file_storage/filelogreceiver:
+    directory: /var/lib/otelcol/file_storage/receiver
 
 receivers:
   otlp:
@@ -21,6 +23,10 @@ receivers:
         scrape_interval: 10s
         static_configs:
         - targets: ['0.0.0.0:8888']
+
+  filelog:
+    include: [/otel_proxy_server.log]
+    storage: file_storage/filelogreceiver
 processors:
   batch:
 
@@ -38,19 +44,20 @@ exporters:
 
 service:
   pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [batch]
-      exporters: [debug, file, googlecloud]
-
-    # metrics:
-    #   receivers: [otlp, opencensus, prometheus]
-    #   processors: [batch]
-    #   exporters: [debug, prometheus, logging]
-
-    # logs:
+    # traces:
     #   receivers: [otlp]
     #   processors: [batch]
-    #   exporters: [debug]
+    #   exporters: [debug, file, googlecloud]
 
-  extensions: [health_check, pprof, zpages]
+    # metrics:
+    #   receivers: [otlp, filelog]
+    #   processors: [batch]
+    #   exporters: [debug, file]
+
+    logs:
+      receivers: [otlp, filelog]
+      processors: [batch]
+      exporters: [debug, googlecloud]
+
+  extensions: [health_check, pprof, zpages, file_storage/filelogreceiver]
+

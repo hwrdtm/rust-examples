@@ -4,14 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "observable-server"
-path = "src/observable_server.rs"
+name = "publish-otel"
+path = "src/publish_otel.rs"
 
 [[bin]]
 name = "proxy-server"
 path = "src/proxy_server.rs"
 
 [dependencies]
+chrono = "0.4.23"
 once_cell = "1.13"
 opentelemetry = "0.23"
 opentelemetry-appender-tracing = { version = "0.4.0", default-features = false }

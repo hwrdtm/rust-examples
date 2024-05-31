@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     // Send dummy log event
-    info!(name: "my-event", target: "my-target", "hello from {}. My price is {}", "apple", 1.99);
+    info!(name: "my-event", target: "my-target", "[Date: {}] hello from {}. My price is {}", chrono::Utc::now().to_rfc3339(), "apple", 1.99);
 
     // Shutdown the pipelines, which will also cause the exporters to flush any remaining data.
     global::shutdown_tracer_provider();
