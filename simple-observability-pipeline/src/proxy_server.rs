@@ -23,20 +23,31 @@ use tokio::net::UnixListener;
 use tokio_stream::wrappers::UnixListenerStream;
 use tonic::{transport::Server, Request, Response, Status};
 
-const LOCAL_FILE_OUT: &str = "./otel_proxy_server.log";
+const LOCAL_COMBINED_OUT: &str = "./otel_combined.log";
+const LOCAL_LOG_FILE_OUT: &str = "./otel_logs.log";
+const LOCAL_METRICS_FILE_OUT: &str = "./otel_metrics.log";
+const LOCAL_TRACES_FILE_OUT: &str = "./otel_traces.log";
 
 #[derive(Debug, Default, Clone)]
 pub struct OTELProxyServer {}
 
 impl OTELProxyServer {
-    fn write_otel_request_to_file(&self, request: &str) -> Result<(), Status> {
+    fn write_otel_request_to_file(&self, file_path: &str, request: &str) -> Result<(), Status> {
         // Write the request as JSON appended to a log file
         let mut file = std::fs::OpenOptions::new()
             .append(true)
-            .open(LOCAL_FILE_OUT)
+            .open(file_path)
             .map_err(|e| Status::internal(format!("Failed to open log file: {}", e)))?;
         writeln!(file, "{}", request)
             .map_err(|e| Status::internal(format!("Failed to write to log file: {}", e)))?;
+
+        // Write the request as JSON to a combined log file
+        let mut file = std::fs::OpenOptions::new()
+            .append(true)
+            .open(LOCAL_COMBINED_OUT)
+            .map_err(|e| Status::internal(format!("Failed to open combined log file: {}", e)))?;
+        writeln!(file, "{}", request)
+            .map_err(|e| Status::internal(format!("Failed to write to combined log file: {}", e)))?;
 
         Ok(())
     }
@@ -52,7 +63,7 @@ impl TraceService for OTELProxyServer {
 
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
-        self.write_otel_request_to_file(&request)?;
+        self.write_otel_request_to_file(LOCAL_TRACES_FILE_OUT, &request)?;
 
         let reply = ExportTraceServiceResponse {
             partial_success: None,
@@ -72,7 +83,7 @@ impl LogsService for OTELProxyServer {
 
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
-        self.write_otel_request_to_file(&request)?;
+        self.write_otel_request_to_file(LOCAL_LOG_FILE_OUT, &request)?;
 
         let reply = ExportLogsServiceResponse {
             partial_success: None,
@@ -92,7 +103,7 @@ impl MetricsService for OTELProxyServer {
 
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
-        self.write_otel_request_to_file(&request)?;
+        self.write_otel_request_to_file(LOCAL_METRICS_FILE_OUT, &request)?;
 
         let reply = ExportMetricsServiceResponse {
             partial_success: None,
@@ -110,13 +121,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::fs::metadata(DEFAULT_SOCK).is_ok() {
         std::fs::remove_file(DEFAULT_SOCK)?;
     }
-
-    // If the log file already exists, remove it
-    if std::fs::metadata(LOCAL_FILE_OUT).is_ok() {
-        std::fs::remove_file(LOCAL_FILE_OUT)?;
-    }
-    // Create the log file
-    std::fs::File::create(LOCAL_FILE_OUT)?;
 
     let uds = UnixListener::bind(DEFAULT_SOCK)?;
     let uds_stream = UnixListenerStream::new(uds);

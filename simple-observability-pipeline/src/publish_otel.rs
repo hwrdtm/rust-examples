@@ -60,8 +60,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(layer)
         .init();
 
-    // Send dummy metrics events
     let common_scope_attributes = vec![KeyValue::new("scope-key", "scope-value")];
+
+    // Send dummy metrics events
     let meter = global::meter_with_version(
         "basic",
         Some("v1.0"),
