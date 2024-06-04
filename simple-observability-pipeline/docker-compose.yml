@@ -1,0 +1,23 @@
+services:
+  otel-collector:
+    image: otelcontribcol:latest
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./otel-collector-config.yaml:/etc/otel/config.yaml
+      - ./service-account-key.json:/etc/otelcol-contrib/key.json
+      - ./:/tmp
+      - ./otel_logs.log:/otel_logs.log
+      - ./otel_metrics.log:/otel_metrics.log
+      - ./otel_traces.log:/otel_traces.log
+      - ./otel_combined.log:/otel_combined.log
+      - ./otelcol/file_storage/filelogreceiver_logs:/var/lib/otelcol/file_storage/filelogreceiver_logs
+      - ./otelcol/file_storage/filelogreceiver_metrics:/var/lib/otelcol/file_storage/filelogreceiver_metrics
+      - ./otelcol/file_storage/filelogreceiver_traces:/var/lib/otelcol/file_storage/filelogreceiver_traces
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/etc/otelcol-contrib/key.json
+    ports:
+      - 1888:1888 # pprof extension
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
