@@ -4,8 +4,12 @@ extensions:
     endpoint: 0.0.0.0:1777
   zpages:
     endpoint: 0.0.0.0:55679
-  file_storage/filelogreceiver:
-    directory: /var/lib/otelcol/file_storage/receiver
+  file_storage/filelogreceiver_logs:
+    directory: /var/lib/otelcol/file_storage/filelogreceiver_logs
+  file_storage/filelogreceiver_metrics:
+    directory: /var/lib/otelcol/file_storage/filelogreceiver_metrics
+  file_storage/filelogreceiver_traces:
+    directory: /var/lib/otelcol/file_storage/filelogreceiver_traces
 
 receivers:
   otlp:
@@ -24,9 +28,21 @@ receivers:
         static_configs:
         - targets: ['0.0.0.0:8888']
 
-  filelog:
-    include: [/otel_proxy_server.log]
-    storage: file_storage/filelogreceiver
+  filelog/logs:
+    include: [/otel_logs.log]
+    storage: file_storage/filelogreceiver_logs
+  filelog/metrics:
+    include: [/otel_metrics.log]
+    storage: file_storage/filelogreceiver_metrics
+  filelog/traces:
+    include: [/otel_traces.log]
+    storage: file_storage/filelogreceiver_traces
+
+connectors:
+  filteringrouter/logs:
+  filteringrouter/metrics:
+  filteringrouter/traces:
+
 processors:
   batch:
 
@@ -38,26 +54,29 @@ exporters:
       default_log_name: opentelemetry.io/collector-exported-log
   debug:
     verbosity: detailed
-  logging:
-    loglevel: debug
-
 
 service:
   pipelines:
-    # traces:
-    #   receivers: [otlp]
-    #   processors: [batch]
-    #   exporters: [debug, file, googlecloud]
-
-    # metrics:
-    #   receivers: [otlp, filelog]
-    #   processors: [batch]
-    #   exporters: [debug, file]
-
+    logs/for_logs:
+      receivers: [filelog/logs]
+      exporters: [filteringrouter/logs]
     logs:
-      receivers: [otlp, filelog]
-      processors: [batch]
+      receivers: [filteringrouter/logs]
       exporters: [debug, googlecloud]
 
-  extensions: [health_check, pprof, zpages, file_storage/filelogreceiver]
+    logs/for_metrics:
+      receivers: [filelog/metrics]
+      exporters: [filteringrouter/metrics]
+    metrics:
+      receivers: [filteringrouter/metrics]
+      exporters: [debug, googlecloud]
+
+    logs/for_traces:
+      receivers: [filelog/traces]
+      exporters: [filteringrouter/traces]
+    traces:
+      receivers: [filteringrouter/traces]
+      exporters: [debug, googlecloud]
+
+  extensions: [health_check, pprof, zpages, file_storage/filelogreceiver_logs, file_storage/filelogreceiver_metrics, file_storage/filelogreceiver_traces]
 
