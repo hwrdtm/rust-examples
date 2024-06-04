@@ -46,8 +46,9 @@ impl OTELProxyServer {
             .append(true)
             .open(LOCAL_COMBINED_OUT)
             .map_err(|e| Status::internal(format!("Failed to open combined log file: {}", e)))?;
-        writeln!(file, "{}", request)
-            .map_err(|e| Status::internal(format!("Failed to write to combined log file: {}", e)))?;
+        writeln!(file, "{}", request).map_err(|e| {
+            Status::internal(format!("Failed to write to combined log file: {}", e))
+        })?;
 
         Ok(())
     }
