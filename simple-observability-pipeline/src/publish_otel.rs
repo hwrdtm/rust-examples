@@ -27,17 +27,17 @@ static RESOURCE: Lazy<Resource> = Lazy::new(|| {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize the tracing pipeline
-    let tracing_provider = init_tracer_provider(init_metrics_exporter_builder().await?)?
+    let tracing_provider = init_tracer_provider(init_tonic_exporter_builder().await?)?
         .provider()
         .expect("Tracer provider not set.");
     global::set_tracer_provider(tracing_provider.clone());
 
     // Initialize the metrics pipeline
-    let meter_provider = init_metrics(init_metrics_exporter_builder().await?)?;
+    let meter_provider = init_metrics(init_tonic_exporter_builder().await?)?;
     global::set_meter_provider(meter_provider.clone());
 
     // Initialize the logs pipeline
-    let logger_provider = init_logs(init_metrics_exporter_builder().await?)?;
+    let logger_provider = init_logs(init_tonic_exporter_builder().await?)?;
 
     // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
     let layer = OpenTelemetryTracingBridge::new(&logger_provider);
@@ -115,8 +115,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn init_metrics_exporter_builder() -> Result<TonicExporterBuilder, Box<dyn std::error::Error>>
-{
+async fn init_tonic_exporter_builder() -> Result<TonicExporterBuilder, Box<dyn std::error::Error>> {
     // Tonic will ignore this uri because uds do not use it
     // if the connector does use the uri it will be provided
     // as the request to the `MakeConnection`.
@@ -141,21 +140,21 @@ async fn init_metrics_exporter_builder() -> Result<TonicExporterBuilder, Box<dyn
 }
 
 fn init_tracer_provider(
-    metrics_exporter_builder: TonicExporterBuilder,
+    tonic_exporter_builder: TonicExporterBuilder,
 ) -> Result<sdktrace::Tracer, TraceError> {
     opentelemetry_otlp::new_pipeline()
         .tracing()
-        .with_exporter(metrics_exporter_builder)
+        .with_exporter(tonic_exporter_builder)
         .with_trace_config(sdktrace::config().with_resource(RESOURCE.clone()))
         .install_batch(opentelemetry_sdk::runtime::Tokio)
 }
 
 fn init_metrics(
-    metrics_exporter_builder: TonicExporterBuilder,
+    tonic_exporter_builder: TonicExporterBuilder,
 ) -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, MetricsError> {
     opentelemetry_otlp::new_pipeline()
         .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(metrics_exporter_builder)
+        .with_exporter(tonic_exporter_builder)
         .with_period(Duration::from_secs(3))
         .with_timeout(Duration::from_secs(10))
         .with_resource(RESOURCE.clone())
@@ -165,10 +164,10 @@ fn init_metrics(
 }
 
 fn init_logs(
-    metrics_exporter_builder: TonicExporterBuilder,
+    tonic_exporter_builder: TonicExporterBuilder,
 ) -> Result<opentelemetry_sdk::logs::LoggerProvider, LogError> {
     opentelemetry_otlp::new_pipeline()
         .logging()
-        .with_exporter(metrics_exporter_builder)
+        .with_exporter(tonic_exporter_builder)
         .install_batch(opentelemetry_sdk::runtime::Tokio)
 }
