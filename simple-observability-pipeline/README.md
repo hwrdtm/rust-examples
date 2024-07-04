@@ -38,8 +38,8 @@ You will need to build your own image of the OTEL Collector (contrib version):
 ## Getting Started
 
 1. Start the OTEL Collector with `docker compose up`.
-2. Start the proxy server with `sudo cargo run --bin proxy-server`.
-3. Run the publish OTEL script with `sudo cargo run --bin publish-otel`. You should see logs in the OTEL Collector service.
+2. Start the proxy server with `cargo run --bin proxy-server`.
+3. Run the publish OTEL script with `cargo run --bin publish-otel`. You should see logs in the OTEL Collector service.
 
 ## Test File Offsets
 

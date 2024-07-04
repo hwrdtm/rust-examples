@@ -1,1 +1,1 @@
-pub const DEFAULT_SOCK: &str = "/var/run/proxy-server.sock";
+pub const DEFAULT_SOCK: &str = "./proxy-server.sock";
