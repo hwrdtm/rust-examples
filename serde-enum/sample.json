@@ -1,0 +1,11 @@
+{
+    "metrics": [
+        {
+            "sum": {
+                "values": [{
+                    "property": 123.0
+                }]
+            }
+        }
+    ]
+}
