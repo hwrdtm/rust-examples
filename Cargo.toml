@@ -4,6 +4,7 @@ members = [
     "cargo-features",
     "closures",
     "crate-version",
+    "custom-future",
     "commands",
     "delayed-spray-and-pray",
     "distributed-tracing/client",
