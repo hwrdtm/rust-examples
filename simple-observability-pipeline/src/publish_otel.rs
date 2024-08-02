@@ -1,19 +1,19 @@
 use std::time::Duration;
 
+use anyhow::Result;
 use once_cell::sync::Lazy;
-use opentelemetry::metrics::Unit;
-use opentelemetry::trace::{TraceContextExt, TraceError, Tracer, TracerProvider};
+use opentelemetry::trace::{TraceContextExt, Tracer, TracerProvider};
 use opentelemetry::Key;
-use opentelemetry::{global, logs::LogError, metrics::MetricsError, KeyValue};
+use opentelemetry::{global, KeyValue};
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
-use opentelemetry_otlp::{ExportConfig, TonicExporterBuilder, WithExportConfig};
-use opentelemetry_sdk::metrics::reader::{DefaultAggregationSelector, DefaultTemporalitySelector};
-use opentelemetry_sdk::{trace as sdktrace, Resource};
-use simple_observability_pipeline::DEFAULT_SOCK;
-use tokio::net::UnixStream;
-use tonic::transport::{Endpoint, Uri};
-use tower::service_fn;
-use tracing::info;
+use opentelemetry_sdk::logs::LoggerProvider;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
+use opentelemetry_sdk::Resource;
+use simple_observability_pipeline::{
+    init_logs, init_metrics, init_tonic_exporter_builder, init_tracer_provider,
+};
+use tracing::{error, info, instrument, Subscriber};
+use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
@@ -24,47 +24,42 @@ static RESOURCE: Lazy<Resource> = Lazy::new(|| {
     )])
 });
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Initialize the tracing pipeline
-    let tracing_provider = init_tracer_provider(init_tonic_exporter_builder().await?)?
-        .provider()
-        .expect("Tracer provider not set.");
-    global::set_tracer_provider(tracing_provider.clone());
+fn main() -> Result<()> {
+    let logging_rt = tokio::runtime::Runtime::new().expect("Failed to create logging runtime");
+    let rt_1 = tokio::runtime::Runtime::new().expect("Failed to create runtime 1");
+    let rt_2 = tokio::runtime::Runtime::new().expect("Failed to create runtime 2");
 
-    // Initialize the metrics pipeline
-    let meter_provider = init_metrics(init_tonic_exporter_builder().await?)?;
-    global::set_meter_provider(meter_provider.clone());
+    let observability_providers = logging_rt.block_on(async {
+        let observability_providers = init_observability().await?;
+        Ok::<ObservabilityProviders, anyhow::Error>(observability_providers)
+    })?;
 
-    // Initialize the logs pipeline
-    let logger_provider = init_logs(init_tonic_exporter_builder().await?)?;
+    let rt1 = rt_1.spawn(async {
+        emit_dummy_events("rt_1".to_string()).await;
+        Ok::<(), anyhow::Error>(())
+    });
 
-    // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
-    let layer = OpenTelemetryTracingBridge::new(&logger_provider);
+    let rt2 = rt_2.spawn(async {
+        emit_dummy_events("rt_2".to_string()).await;
+        Ok::<(), anyhow::Error>(())
+    });
 
-    // Add a tracing filter to filter events from crates used by opentelemetry-otlp.
-    // The filter levels are set as follows:
-    // - Allow `info` level and above by default.
-    // - Restrict `hyper`, `tonic`, and `reqwest` to `error` level logs only.
-    // This ensures events generated from these crates within the OTLP Exporter are not looped back,
-    // thus preventing infinite event generation.
-    // Note: This will also drop events from these crates used outside the OTLP Exporter.
-    // For more details, see: https://github.com/open-telemetry/opentelemetry-rust/issues/761
-    let filter = EnvFilter::new("info")
-        .add_directive("hyper=error".parse().unwrap())
-        .add_directive("tonic=error".parse().unwrap())
-        .add_directive("reqwest=error".parse().unwrap());
+    // Sleep for 30 seconds
+    std::thread::sleep(Duration::from_secs(30));
 
-    tracing_subscriber::registry()
-        .with(filter)
-        .with(layer)
-        .init();
+    observability_providers.shutdown();
 
-    let common_scope_attributes = vec![KeyValue::new("scope-key", "scope-value")];
+    Ok(())
+}
+
+async fn emit_dummy_events(thread_name: String) {
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    let common_scope_attributes = vec![KeyValue::new("scope-key", thread_name.clone())];
 
     // Send dummy metrics events
     let meter = global::meter_with_version(
-        "basic",
+        format!("basic-otlp-example-{}", thread_name),
         Some("v1.0"),
         Some("schema_url"),
         Some(common_scope_attributes.clone()),
@@ -73,7 +68,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let counter = meter
         .u64_counter("test_counter")
         .with_description("a simple counter for demo purposes.")
-        .with_unit(Unit::new("my_unit"))
         .init();
     for _ in 0..10 {
         counter.add(1, &[KeyValue::new("http.client_ip", "83.164.160.102")]);
@@ -102,72 +96,103 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
 
+    slow_process().await;
+
     // Send dummy log event
     info!(name: "my-event", target: "my-target", "[Date: {}] hello from {}. My price is {}", chrono::Utc::now().to_rfc3339(), "apple", 1.99);
 
-    // Shutdown the pipelines, which will also cause the exporters to flush any remaining data.
-    global::shutdown_tracer_provider();
-    meter_provider.shutdown()?;
-    logger_provider.shutdown()?;
+    println!("{:?}: Done emitting dummy events", thread_name);
 
-    println!("Done!");
-
-    Ok(())
+    // sleep for 500 seconds
+    tokio::time::sleep(Duration::from_secs(20)).await;
 }
 
-async fn init_tonic_exporter_builder() -> Result<TonicExporterBuilder, Box<dyn std::error::Error>> {
-    // Tonic will ignore this uri because uds do not use it
-    // if the connector does use the uri it will be provided
-    // as the request to the `MakeConnection`.
-    let channel = Endpoint::try_from("http://127.0.0.1:4371")
-        .map_err(|e| MetricsError::Other(e.to_string()))?
-        .connect_with_connector(service_fn(|_: Uri| {
-            // Connect to a Uds socket
-            UnixStream::connect(DEFAULT_SOCK)
-        }))
-        .await
-        .map_err(|e| MetricsError::Other(e.to_string()))?;
-
-    // First, create a OTLP exporter builder. Configure it as you need.
-    Ok(opentelemetry_otlp::new_exporter()
-        .tonic()
-        .with_channel(channel)
-        .with_export_config(ExportConfig {
-            endpoint: "".to_string(),
-            protocol: opentelemetry_otlp::Protocol::Grpc,
-            timeout: Duration::from_secs(3),
-        })) // Then pass it into pipeline builder
+#[instrument]
+async fn slow_process() {
+    tokio::time::sleep(Duration::from_secs(2)).await;
 }
 
-fn init_tracer_provider(
-    tonic_exporter_builder: TonicExporterBuilder,
-) -> Result<sdktrace::Tracer, TraceError> {
-    opentelemetry_otlp::new_pipeline()
-        .tracing()
-        .with_exporter(tonic_exporter_builder)
-        .with_trace_config(sdktrace::config().with_resource(RESOURCE.clone()))
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
+async fn init_observability() -> Result<ObservabilityProviders> {
+    let (tracing_provider, metrics_provider, subscriber, logger_provider) =
+        create_providers().await?;
+
+    // Set globals
+    global::set_tracer_provider(tracing_provider);
+    global::set_meter_provider(metrics_provider.clone());
+    subscriber.init();
+
+    Ok(ObservabilityProviders::new(
+        metrics_provider,
+        logger_provider,
+    ))
 }
 
-fn init_metrics(
-    tonic_exporter_builder: TonicExporterBuilder,
-) -> Result<opentelemetry_sdk::metrics::SdkMeterProvider, MetricsError> {
-    opentelemetry_otlp::new_pipeline()
-        .metrics(opentelemetry_sdk::runtime::Tokio)
-        .with_exporter(tonic_exporter_builder)
-        .with_period(Duration::from_secs(3))
-        .with_timeout(Duration::from_secs(10))
-        .with_resource(RESOURCE.clone())
-        .with_aggregation_selector(DefaultAggregationSelector::new())
-        .with_temporality_selector(DefaultTemporalitySelector::new())
-        .build()
+async fn create_providers() -> Result<(
+    opentelemetry_sdk::trace::TracerProvider,
+    SdkMeterProvider,
+    impl Subscriber,
+    LoggerProvider,
+)> {
+    // Initialize the tracing pipeline
+    let tracing_provider =
+        init_tracer_provider(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
+    let tracer = tracing_provider.tracer("basic-tracer");
+
+    // Initialize the metrics pipeline
+    let meter_provider = init_metrics(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
+
+    // Initialize the logs pipeline
+    let logger_provider = init_logs(init_tonic_exporter_builder().await?)?;
+
+    // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
+    let layer = OpenTelemetryTracingBridge::new(&logger_provider);
+
+    // Add a tracing filter to filter events from crates used by opentelemetry-otlp.
+    // The filter levels are set as follows:
+    // - Allow `info` level and above by default.
+    // - Restrict `hyper`, `tonic`, and `reqwest` to `error` level logs only.
+    // This ensures events generated from these crates within the OTLP Exporter are not looped back,
+    // thus preventing infinite event generation.
+    // Note: This will also drop events from these crates used outside the OTLP Exporter.
+    // For more details, see: https://github.com/open-telemetry/opentelemetry-rust/issues/761
+    let filter = EnvFilter::new("info")
+        .add_directive("hyper=error".parse().unwrap())
+        .add_directive("tonic=error".parse().unwrap())
+        .add_directive("reqwest=error".parse().unwrap());
+
+    let sub = tracing_subscriber::registry()
+        .with(filter)
+        .with(layer)
+        .with(MetricsLayer::new(meter_provider.clone()))
+        .with(OpenTelemetryLayer::new(tracer));
+
+    Ok((tracing_provider, meter_provider, sub, logger_provider))
 }
 
-fn init_logs(
-    tonic_exporter_builder: TonicExporterBuilder,
-) -> Result<opentelemetry_sdk::logs::LoggerProvider, LogError> {
-    opentelemetry_otlp::new_pipeline()
-        .logging()
-        .with_exporter(tonic_exporter_builder)
-        .install_batch(opentelemetry_sdk::runtime::Tokio)
+#[derive(Default)]
+struct ObservabilityProviders {
+    meter_provider: Option<SdkMeterProvider>,
+    logger_provider: Option<LoggerProvider>,
+}
+
+impl ObservabilityProviders {
+    fn new(meter_provider: SdkMeterProvider, logger_provider: LoggerProvider) -> Self {
+        Self {
+            meter_provider: Some(meter_provider),
+            logger_provider: Some(logger_provider),
+        }
+    }
+
+    fn shutdown(self) {
+        if let Some(meter_provider) = self.meter_provider {
+            if let Err(e) = meter_provider.shutdown() {
+                error!("Failed to shutdown metrics provider: {:?}", e);
+            }
+        }
+        if let Some(logger_provider) = self.logger_provider {
+            if let Err(e) = logger_provider.shutdown() {
+                error!("Failed to shutdown logger provider: {:?}", e);
+            }
+        }
+    }
 }

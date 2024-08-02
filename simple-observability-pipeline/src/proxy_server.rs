@@ -60,8 +60,6 @@ impl TraceService for OTELProxyServer {
         &self,
         request: Request<ExportTraceServiceRequest>,
     ) -> Result<Response<ExportTraceServiceResponse>, Status> {
-        println!("Got a trace request: {:?}", request);
-
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
         self.write_otel_request_to_file(LOCAL_TRACES_FILE_OUT, &request)?;
@@ -80,8 +78,6 @@ impl LogsService for OTELProxyServer {
         &self,
         request: Request<ExportLogsServiceRequest>,
     ) -> Result<Response<ExportLogsServiceResponse>, Status> {
-        println!("Got a log request: {:?}", request);
-
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
         self.write_otel_request_to_file(LOCAL_LOG_FILE_OUT, &request)?;
@@ -100,8 +96,6 @@ impl MetricsService for OTELProxyServer {
         &self,
         request: Request<ExportMetricsServiceRequest>,
     ) -> Result<Response<ExportMetricsServiceResponse>, Status> {
-        println!("Got a metrics request: {:?}", request);
-
         let request = serde_json::to_string(&request.into_inner())
             .map_err(|e| Status::internal(format!("Failed to serialize request: {}", e)))?;
         self.write_otel_request_to_file(LOCAL_METRICS_FILE_OUT, &request)?;
