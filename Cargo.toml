@@ -28,5 +28,6 @@ members = [
     "simple-dockerized-server",
     "tasks-greater-than-interval",
     "simple-observability-pipeline",
-    "serde-enum"
+    "serde-enum",
+    "tracing-fmt"
 ]

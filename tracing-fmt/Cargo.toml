@@ -1,0 +1,13 @@
+[package]
+name = "tracing-fmt"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+ignore-fields = []
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tracing = { git = "https://github.com/LIT-Protocol/tracing", branch = "hwrdtm/custom-format", features = ["std"] }
+tracing-subscriber = { git = "https://github.com/LIT-Protocol/tracing", branch = "hwrdtm/custom-format", features = ["env-filter", "registry", "std"] }
