@@ -9,6 +9,7 @@ use tracing_subscriber::{
     EnvFilter,
 };
 
+mod event_format;
 mod field_format;
 
 pub fn init_subscriber() -> Result<impl Subscriber, Box<dyn std::error::Error>> {
@@ -16,7 +17,8 @@ pub fn init_subscriber() -> Result<impl Subscriber, Box<dyn std::error::Error>> 
         EnvFilter::try_from_default_env().or_else(|_e| EnvFilter::from_str("debug"))?;
     println!("Using level filter: {}", level_filter);
 
-    let custom_formatter = Format::default()
+    // let custom_formatter = Format::default()
+    let custom_formatter = event_format::CustomEventFormatter::default()
         .with_line_number(true)
         .with_event_scope(false)
         .with_prefix_string(Some("PREFIX".to_string()));
