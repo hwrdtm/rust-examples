@@ -30,5 +30,6 @@ members = [
     "tasks-greater-than-interval",
     "simple-observability-pipeline",
     "serde-enum",
-    "tracing-fmt"
+    "tracing-fmt",
+    "runtime-hang"
 ]
