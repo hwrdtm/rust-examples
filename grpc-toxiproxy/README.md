@@ -7,5 +7,5 @@ The setup was done following the tutorial at https://github.com/hyperium/tonic/b
 - First start [Toxiproxy](https://github.com/Shopify/toxiproxy)
 - Spin up server with `cargo run --bin server`
 - Inject the faults with `cargo run --bin faults`
-- Spin up the client with `cargo run --bin client`
-- Observe the effects of an injected latency fault, eg. the log `Request took 5011ms`
+- Spin up the client with `cargo run --bin client --features proxy_grpc` to observe the effects of an injected latency fault, eg. the log `Request took 5011ms`.
+- Spin up the client with `cargo run --bin client` to run the GRPC call without latency faults.
