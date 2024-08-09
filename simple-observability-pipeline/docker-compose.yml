@@ -2,14 +2,19 @@ services:
   otel-collector:
     image: otelcontribcol:latest
     volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      # - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
       - ./otel-collector-config.yaml:/etc/otel/config.yaml
+
+      # Mount for the service account key
       - ./service-account-key.json:/etc/otelcol-contrib/key.json
-      - ./:/tmp
+      
+      # Mount for the files to read from the filelogreceiver
       - ./otel_logs.log:/otel_logs.log
       - ./otel_metrics.log:/otel_metrics.log
       - ./otel_traces.log:/otel_traces.log
       - ./otel_combined.log:/otel_combined.log
+
+      # Mount for the filelogreceiver to track its own state (eg. cursor).
       - ./otelcol/file_storage/filelogreceiver_logs:/var/lib/otelcol/file_storage/filelogreceiver_logs
       - ./otelcol/file_storage/filelogreceiver_metrics:/var/lib/otelcol/file_storage/filelogreceiver_metrics
       - ./otelcol/file_storage/filelogreceiver_traces:/var/lib/otelcol/file_storage/filelogreceiver_traces
