@@ -52,6 +52,15 @@ exporters:
   googlecloud:
     log:
       default_log_name: opentelemetry.io/collector-exported-log
+      resource_filters:
+        - prefix: "url"
+        - prefix: "service"
+        - prefix: "custom"
+    metric:
+      resource_filters:
+        - prefix: "url"
+        - prefix: "service"
+        - prefix: "custom"
   debug:
     verbosity: detailed
 
