@@ -18,10 +18,17 @@ use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 
 static RESOURCE: Lazy<Resource> = Lazy::new(|| {
-    Resource::new(vec![KeyValue::new(
-        opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-        "basic-otlp-example",
-    )])
+    Resource::new(vec![
+        KeyValue::new(
+            opentelemetry_semantic_conventions::resource::SERVICE_NAME,
+            "basic-otlp-example",
+        ),
+        KeyValue::new(
+            opentelemetry_semantic_conventions::resource::URL_DOMAIN,
+            "localhost",
+        ),
+        KeyValue::new("custom.key", "custom-value"),
+    ])
 });
 
 fn main() -> Result<()> {
