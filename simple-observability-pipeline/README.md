@@ -32,7 +32,7 @@ You will need to build your own image of the OTEL Collector (contrib version):
   - `make crosslink`
   - `make gotidy`
 3. Copy the `builder-config.custom.yaml` in this directory into `cmd/otelcontribcol` of that repo.
-4. Modify the `make genotelcontribcol` command in the `Makefile` to use this new custom config file, eg. `$(BUILDER) --skip-compilation --config cmd/otelcontribcol/builder-config.yaml --output-path cmd/otelcontribcol`.
+4. Modify the `make genotelcontribcol` command in the `Makefile` to use this new custom config file, eg. `$(BUILDER) --skip-compilation --config cmd/otelcontribcol/builder-config.yaml --output-path cmd/otelcontribcol`. Run `make genotelcontribcol`.
 5. Run `make docker-otelcontribcol` to build the docker image. You should now see a `otelcontribcol` tagged with `latest` when you run `docker images`.
 
 ## Getting Started

@@ -32,7 +32,7 @@ func createDefaultConfig() component.Config {
 	}
 }
 
-func createLogsToLogsConnector(ctx context.Context, params connector.CreateSettings, cfg component.Config, nextConsumer consumer.Logs) (connector.Logs, error) {
+func createLogsToLogsConnector(ctx context.Context, params connector.Settings, cfg component.Config, nextConsumer consumer.Logs) (connector.Logs, error) {
 	c, err := newLogsConnector(params.Logger, cfg)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func createLogsToLogsConnector(ctx context.Context, params connector.CreateSetti
 	return c, nil
 }
 
-func createLogsToTracesConnector(ctx context.Context, params connector.CreateSettings, cfg component.Config, nextConsumer consumer.Traces) (connector.Logs, error) {
+func createLogsToTracesConnector(ctx context.Context, params connector.Settings, cfg component.Config, nextConsumer consumer.Traces) (connector.Logs, error) {
 	c, err := newTracesConnector(params.Logger, cfg)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func createLogsToTracesConnector(ctx context.Context, params connector.CreateSet
 	return c, nil
 }
 
-func createLogsToMetricsConnector(ctx context.Context, params connector.CreateSettings, cfg component.Config, nextConsumer consumer.Metrics) (connector.Logs, error) {
+func createLogsToMetricsConnector(ctx context.Context, params connector.Settings, cfg component.Config, nextConsumer consumer.Metrics) (connector.Logs, error) {
 	c, err := newMetricsConnector(params.Logger, cfg)
 	if err != nil {
 		return nil, err
