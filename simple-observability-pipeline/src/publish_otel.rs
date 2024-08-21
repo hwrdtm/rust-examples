@@ -27,7 +27,6 @@ static RESOURCE: Lazy<Resource> = Lazy::new(|| {
             opentelemetry_semantic_conventions::resource::URL_DOMAIN,
             "localhost",
         ),
-        KeyValue::new("custom.key", "custom-value"),
     ])
 });
 
@@ -149,7 +148,7 @@ async fn create_providers() -> Result<(
     let meter_provider = init_metrics(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
 
     // Initialize the logs pipeline
-    let logger_provider = init_logs(init_tonic_exporter_builder().await?)?;
+    let logger_provider = init_logs(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
 
     // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
     let layer = OpenTelemetryTracingBridge::new(&logger_provider);

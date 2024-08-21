@@ -81,9 +81,11 @@ pub fn init_metrics(
 
 pub fn init_logs(
     tonic_exporter_builder: TonicExporterBuilder,
+    resource: Resource,
 ) -> Result<opentelemetry_sdk::logs::LoggerProvider, LogError> {
     opentelemetry_otlp::new_pipeline()
         .logging()
+        .with_resource(resource)
         .with_exporter(tonic_exporter_builder)
         .install_batch(opentelemetry_sdk::runtime::Tokio)
 }

@@ -44,7 +44,15 @@ connectors:
   filteringrouter/traces:
 
 processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 4000
   batch:
+  resource:
+    attributes:
+      - key: "custom.id"
+        action: "insert"
+        value: "test_subnet_id"
 
 exporters:
   file:
@@ -66,9 +74,11 @@ exporters:
 
 service:
   pipelines:
-    logs/for_logs:
-      receivers: [filelog/logs]
-      exporters: [filteringrouter/logs]
+    logs/otlp:
+      receivers: [otlp]
+      processors: [resource, memory_limiter, batch]
+      exporters: [debug]
+
     logs:
       receivers: [filteringrouter/logs]
       exporters: [debug, googlecloud]
