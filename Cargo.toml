@@ -23,6 +23,7 @@ members = [
     "retry",
     "retry-basic",
     "rocket",
+    "rocket-metrics",
     "rocket-concurrency",
     "serde",
     "simple-systemd-http-server",
