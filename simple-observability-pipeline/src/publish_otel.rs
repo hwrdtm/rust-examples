@@ -5,12 +5,11 @@ use once_cell::sync::Lazy;
 use opentelemetry::trace::{TraceContextExt, Tracer, TracerProvider};
 use opentelemetry::Key;
 use opentelemetry::{global, KeyValue};
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_sdk::logs::LoggerProvider;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::Resource;
 use simple_observability_pipeline::{
-    init_logs, init_metrics, init_tonic_exporter_builder, init_tracer_provider,
+    create_providers, init_logs, init_metrics, init_tonic_exporter_builder, init_tracer_provider,
 };
 use tracing::{error, info, instrument, Subscriber};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
@@ -21,7 +20,7 @@ static RESOURCE: Lazy<Resource> = Lazy::new(|| {
     Resource::new(vec![
         KeyValue::new(
             opentelemetry_semantic_conventions::resource::SERVICE_NAME,
-            "basic-otlp-example",
+            "basic-otlp-client",
         ),
         KeyValue::new(
             opentelemetry_semantic_conventions::resource::URL_DOMAIN,
@@ -120,7 +119,7 @@ async fn slow_process() {
 
 async fn init_observability() -> Result<ObservabilityProviders> {
     let (tracing_provider, metrics_provider, subscriber, logger_provider) =
-        create_providers().await?;
+        create_providers(RESOURCE.clone(), false).await?;
 
     // Set globals
     global::set_tracer_provider(tracing_provider);
@@ -131,48 +130,6 @@ async fn init_observability() -> Result<ObservabilityProviders> {
         metrics_provider,
         logger_provider,
     ))
-}
-
-async fn create_providers() -> Result<(
-    opentelemetry_sdk::trace::TracerProvider,
-    SdkMeterProvider,
-    impl Subscriber,
-    LoggerProvider,
-)> {
-    // Initialize the tracing pipeline
-    let tracing_provider =
-        init_tracer_provider(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
-    let tracer = tracing_provider.tracer("basic-tracer");
-
-    // Initialize the metrics pipeline
-    let meter_provider = init_metrics(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
-
-    // Initialize the logs pipeline
-    let logger_provider = init_logs(init_tonic_exporter_builder().await?, RESOURCE.clone())?;
-
-    // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
-    let layer = OpenTelemetryTracingBridge::new(&logger_provider);
-
-    // Add a tracing filter to filter events from crates used by opentelemetry-otlp.
-    // The filter levels are set as follows:
-    // - Allow `info` level and above by default.
-    // - Restrict `hyper`, `tonic`, and `reqwest` to `error` level logs only.
-    // This ensures events generated from these crates within the OTLP Exporter are not looped back,
-    // thus preventing infinite event generation.
-    // Note: This will also drop events from these crates used outside the OTLP Exporter.
-    // For more details, see: https://github.com/open-telemetry/opentelemetry-rust/issues/761
-    let filter = EnvFilter::new("info")
-        .add_directive("hyper=error".parse().unwrap())
-        .add_directive("tonic=error".parse().unwrap())
-        .add_directive("reqwest=error".parse().unwrap());
-
-    let sub = tracing_subscriber::registry()
-        .with(filter)
-        .with(layer)
-        .with(MetricsLayer::new(meter_provider.clone()))
-        .with(OpenTelemetryLayer::new(tracer));
-
-    Ok((tracing_provider, meter_provider, sub, logger_provider))
 }
 
 #[derive(Default)]
