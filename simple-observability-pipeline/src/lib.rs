@@ -164,6 +164,8 @@ pub async fn create_providers(
     let filter = EnvFilter::new("info")
         .add_directive("hyper=error".parse().unwrap())
         .add_directive("tonic=error".parse().unwrap())
+        .add_directive("tower=error".parse().unwrap())
+        .add_directive("h2=error".parse().unwrap())
         .add_directive("reqwest=error".parse().unwrap());
 
     let sub = tracing_subscriber::registry()
