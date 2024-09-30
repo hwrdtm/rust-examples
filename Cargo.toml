@@ -32,5 +32,6 @@ members = [
     "simple-observability-pipeline",
     "serde-enum",
     "tracing-fmt",
-    "runtime-hang"
+    "runtime-hang",
+    "tracing-channels"
 ]
