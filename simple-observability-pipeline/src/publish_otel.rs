@@ -8,13 +8,9 @@ use opentelemetry::{global, KeyValue};
 use opentelemetry_sdk::logs::LoggerProvider;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::Resource;
-use simple_observability_pipeline::{
-    create_providers, init_logs, init_metrics, init_tonic_exporter_builder, init_tracer_provider,
-};
-use tracing::{error, info, instrument, Subscriber};
-use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
+use simple_observability_pipeline::create_providers;
+use tracing::{error, info, instrument};
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::EnvFilter;
 
 static RESOURCE: Lazy<Resource> = Lazy::new(|| {
     Resource::new(vec![
@@ -119,7 +115,7 @@ async fn slow_process() {
 
 async fn init_observability() -> Result<ObservabilityProviders> {
     let (tracing_provider, metrics_provider, subscriber, logger_provider) =
-        create_providers(RESOURCE.clone(), false).await?;
+        create_providers(RESOURCE.clone(), true, false).await?;
 
     // Set globals
     global::set_tracer_provider(tracing_provider);

@@ -232,7 +232,7 @@ where
 
 async fn init_observability() -> Result<ObservabilityProviders> {
     let (tracing_provider, metrics_provider, subscriber, logger_provider) =
-        create_providers(RESOURCE.clone(), true).await?;
+        create_providers(RESOURCE.clone(), true, true).await?;
 
     // Set globals
     global::set_tracer_provider(tracing_provider);

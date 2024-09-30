@@ -25,44 +25,51 @@ pub const DEFAULT_SOCK: &str = "/tmp/proxy-server.sock";
 /// If `exporting_from_logging_service` is true, the exporter will be configured to intercept
 /// requests to add additional headers (extensions) to the request.
 pub async fn init_tonic_exporter_builder(
+    use_channel: bool,
     exporting_from_logging_service: bool,
 ) -> Result<TonicExporterBuilder> {
-    // Tonic will ignore this uri because uds do not use it
-    // if the connector does use the uri it will be provided
-    // as the request to the `MakeConnection`.
-    let service_fn = service_fn(|_: Uri| async {
-        // Try connecting up to 5 times
-        for _ in 0..5 {
-            match UnixStream::connect(DEFAULT_SOCK).await {
-                Ok(stream) => return Ok(TokioIo::new(stream)),
-                Err(e) => {
-                    println!("Failed to connect to UDS socket: {}", e);
+    let mut exporter = if use_channel {
+        // Tonic will ignore this uri because uds do not use it
+        // if the connector does use the uri it will be provided
+        // as the request to the `MakeConnection`.
+        let service_fn = service_fn(|_: Uri| async {
+            // Try connecting up to 5 times
+            for _ in 0..5 {
+                match UnixStream::connect(DEFAULT_SOCK).await {
+                    Ok(stream) => return Ok(TokioIo::new(stream)),
+                    Err(e) => {
+                        println!("Failed to connect to UDS socket: {}", e);
 
-                    // Wait for 1 seconds before retrying.
-                    tokio::time::sleep(Duration::from_secs(1)).await;
+                        // Wait for 1 seconds before retrying.
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                    }
                 }
             }
-        }
 
-        Err(MetricsError::Other(
-            "Failed to connect to UDS socket".to_string(),
-        ))
-    });
-    let channel = Endpoint::try_from("http://127.0.0.1:4371")
-        .map_err(|e| MetricsError::Other(e.to_string()))?
-        .connect_with_connector(service_fn)
-        .await
-        .map_err(|e| MetricsError::Other(e.to_string()))?;
-
-    // First, create a OTLP exporter builder. Configure it as you need.
-    let mut exporter = opentelemetry_otlp::new_exporter()
-        .tonic()
-        .with_channel(channel)
-        .with_export_config(ExportConfig {
-            endpoint: "".to_string(),
-            protocol: opentelemetry_otlp::Protocol::Grpc,
-            timeout: Duration::from_secs(3),
+            Err(MetricsError::Other(
+                "Failed to connect to UDS socket".to_string(),
+            ))
         });
+        
+        let channel = Endpoint::try_from("http://127.0.0.1:4371")
+            .map_err(|e| MetricsError::Other(e.to_string()))?
+            .connect_with_connector(service_fn)
+            .await
+            .map_err(|e| MetricsError::Other(e.to_string()))?;
+
+        // First, create a OTLP exporter builder. Configure it as you need.
+        opentelemetry_otlp::new_exporter()
+            .tonic()
+            .with_channel(channel)
+            .with_export_config(ExportConfig {
+                endpoint: "".to_string(),
+                protocol: opentelemetry_otlp::Protocol::Grpc,
+                timeout: Duration::from_secs(3),
+            })
+    } else {
+        opentelemetry_otlp::new_exporter().tonic()
+    };
+
     if exporting_from_logging_service {
         exporter = exporter.with_interceptor(intercept);
     }
@@ -116,6 +123,7 @@ pub fn init_logs(
 
 pub async fn create_providers(
     resource: Resource,
+    use_channel: bool,
     exporting_from_logging_service: bool,
 ) -> Result<(
     opentelemetry_sdk::trace::TracerProvider,
@@ -125,20 +133,20 @@ pub async fn create_providers(
 )> {
     // Initialize the tracing pipeline
     let tracing_provider = init_tracer_provider(
-        init_tonic_exporter_builder(exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_channel, exporting_from_logging_service).await?,
         resource.clone(),
     )?;
     let tracer = tracing_provider.tracer("basic-tracer");
 
     // Initialize the metrics pipeline
     let meter_provider = init_metrics(
-        init_tonic_exporter_builder(exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_channel, exporting_from_logging_service).await?,
         resource.clone(),
     )?;
 
     // Initialize the logs pipeline
     let logger_provider = init_logs(
-        init_tonic_exporter_builder(exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_channel,exporting_from_logging_service).await?,
         resource.clone(),
     )?;
 
