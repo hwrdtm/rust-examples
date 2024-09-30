@@ -20,15 +20,19 @@ use tracing_opentelemetry::{layer, MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::{fmt, EnvFilter};
 
+// Re-exports
+pub use opentelemetry;
+pub use opentelemetry_sdk;
+
 pub const DEFAULT_SOCK: &str = "/tmp/proxy-server.sock";
 
 /// If `exporting_from_logging_service` is true, the exporter will be configured to intercept
 /// requests to add additional headers (extensions) to the request.
 pub async fn init_tonic_exporter_builder(
-    use_channel: bool,
+    use_proxy: bool,
     exporting_from_logging_service: bool,
 ) -> Result<TonicExporterBuilder> {
-    let mut exporter = if use_channel {
+    let mut exporter = if use_proxy {
         // Tonic will ignore this uri because uds do not use it
         // if the connector does use the uri it will be provided
         // as the request to the `MakeConnection`.
@@ -123,7 +127,7 @@ pub fn init_logs(
 
 pub async fn create_providers(
     resource: Resource,
-    use_channel: bool,
+    use_proxy: bool,
     exporting_from_logging_service: bool,
 ) -> Result<(
     opentelemetry_sdk::trace::TracerProvider,
@@ -133,20 +137,20 @@ pub async fn create_providers(
 )> {
     // Initialize the tracing pipeline
     let tracing_provider = init_tracer_provider(
-        init_tonic_exporter_builder(use_channel, exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_proxy, exporting_from_logging_service).await?,
         resource.clone(),
     )?;
     let tracer = tracing_provider.tracer("basic-tracer");
 
     // Initialize the metrics pipeline
     let meter_provider = init_metrics(
-        init_tonic_exporter_builder(use_channel, exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_proxy, exporting_from_logging_service).await?,
         resource.clone(),
     )?;
 
     // Initialize the logs pipeline
     let logger_provider = init_logs(
-        init_tonic_exporter_builder(use_channel,exporting_from_logging_service).await?,
+        init_tonic_exporter_builder(use_proxy, exporting_from_logging_service).await?,
         resource.clone(),
     )?;
 
