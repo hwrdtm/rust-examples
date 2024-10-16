@@ -1,21 +1,15 @@
-use std::collections::HashMap;
-
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use simple_observability_pipeline::{
     create_providers,
-    opentelemetry::{
-        global,
-        propagation::{Extractor, Injector},
-        KeyValue,
-    },
+    opentelemetry::{global, KeyValue},
     opentelemetry_sdk::{
         logs::LoggerProvider, metrics::SdkMeterProvider, propagation::TraceContextPropagator,
-        trace::Span, Resource,
+        Resource,
     },
 };
-use tracing::{error, instrument};
-use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing::{error, instrument, Instrument};
+use tracing_channels::{new_bounded_channel, new_unbounded_channel, TracedReceiver, TracedSender};
 use tracing_subscriber::util::SubscriberInitExt;
 
 static RESOURCE: Lazy<Resource> = Lazy::new(|| {
@@ -31,29 +25,6 @@ static RESOURCE: Lazy<Resource> = Lazy::new(|| {
     ])
 });
 
-pub struct ChannelData<T> {
-    metadata: HashMap<String, String>,
-    data: T,
-}
-
-pub struct ChannelMetadata<'a>(&'a mut HashMap<String, String>);
-
-impl<'a> Injector for ChannelMetadata<'a> {
-    fn set(&mut self, key: &str, value: String) {
-        self.0.insert(key.to_lowercase(), value);
-    }
-}
-
-impl<'a> Extractor for ChannelMetadata<'a> {
-    fn get(&self, key: &str) -> Option<&str> {
-        self.0.get(key).map(|v| v.as_str())
-    }
-
-    fn keys(&self) -> Vec<&str> {
-        self.0.keys().map(|k| k.as_str()).collect()
-    }
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let observability_rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
     let observability_providers = observability_rt.block_on(async {
@@ -63,7 +34,9 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
 
     let main_rt = tokio::runtime::Runtime::new().expect("Failed to create tokio runtime");
     main_rt.block_on(async {
-        outer_trace().await;
+        oneshot_channel_example().await;
+
+        forever_loop_example().await;
 
         // Sleep for 10 seconds to export traces
         tokio::time::sleep(std::time::Duration::from_secs(100)).await;
@@ -75,57 +48,82 @@ fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     Ok(())
 }
 
+/// Simulate producer / consumer workers in separate tasks.
+///
+/// We intentionally do NOT instrument this function to have each send be the root of each trace.
+async fn forever_loop_example() {
+    // Create new flume unbounded channel.
+    let (tx, rx) = new_unbounded_channel::<bool>();
+
+    // Spawn a new task that will send a value to the channel every 100ms.
+    tokio::spawn(async move { send_to_channel_continuously(tx).await });
+
+    // Spawn a new task that will receive a value from the channel.
+    tokio::spawn(async move { receive_from_channel_continuously(rx).await });
+}
+
+async fn send_to_channel_continuously(tx: TracedSender<bool>) {
+    loop {
+        tx.send_async(true).await.expect("Failed to send value");
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+}
+
+async fn receive_from_channel_continuously(rx: TracedReceiver<bool>) {
+    while let Ok((_d, span)) = rx.recv_async().await {
+        async {
+            // Do work
+            tracing::info!("received value");
+
+            doing_some_work().await;
+        }
+        .instrument(span)
+        .await;
+    }
+}
+
+/// One shot channel example.
 #[instrument(level = "info")]
-async fn outer_trace() {
+async fn oneshot_channel_example() {
     tracing::info!("outer trace");
 
     // Create new flume bounded channel.
-    let (tx, rx) = flume::bounded::<ChannelData<bool>>(10);
+    let (tx, rx) = new_bounded_channel::<bool>(0);
 
     // Spawn a new task that will send a value to the channel.
-    let task_span = tracing::span!(tracing::Level::INFO, "task");
-    tokio::spawn(async move {
-        let _guard = task_span.enter();
-
-        // Inject tracing context into metadata.
-        let mut metadata = HashMap::new();
-        let cx = tracing::Span::current().context();
-        global::get_text_map_propagator(|propagator| {
-            propagator.inject_context(&cx, &mut ChannelMetadata(&mut metadata))
-        });
-
-        tx.send_async(ChannelData {
-            metadata,
-            data: true,
-        })
-        .await
-        .unwrap();
-    });
+    let send_task = tracing::span!(tracing::Level::INFO, "send_task");
+    tokio::spawn(
+        async move {
+            tx.send_async(true).await.expect("Failed to send value");
+        }
+        .instrument(send_task),
+    );
 
     // Spawn a new task that will receive a value from the channel.
     tokio::spawn(async move {
-        let mut value = rx.recv_async().await.expect("Failed to receive value");
+        let (_d, span) = rx.recv_async().await.expect("Failed to receive value");
 
-        // Extract the propagated tracing context from the incoming request headers.
-        let parent_cx = global::get_text_map_propagator(|propagator| {
-            propagator.extract(&ChannelMetadata(&mut value.metadata))
-        });
+        async {
+            // Do work
+            tracing::info!("received value");
 
-        // Initialize a new span with the extracted tracing context as the parent.
-        let info_span = tracing::info_span!("doing_some_work",);
-        info_span.set_parent(parent_cx);
-
-        // Do work
-        tracing::info!("received value");
-
-        // Sleep for 1.3333s
-        tokio::time::sleep(std::time::Duration::from_secs_f32(1.3333)).await;
+            doing_some_work().await;
+        }
+        .instrument(span)
     });
 
     inner_trace();
 
     // Sleep for 1s
     tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+}
+
+#[instrument]
+async fn doing_some_work() {
+    tracing::info!("doing some work");
+
+    // Sleep for 1.3333s
+    tokio::time::sleep(std::time::Duration::from_secs_f32(1.3333)).await;
 }
 
 #[instrument]
