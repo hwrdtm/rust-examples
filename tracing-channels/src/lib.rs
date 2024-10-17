@@ -59,7 +59,6 @@ impl<T> TracedReceiver<T> {
         let mut msg = self
             .inner
             .recv_async()
-            // .instrument(info_span!("recv_async"))
             .instrument(recv_span.clone())
             .await?;
 
